@@ -1,6 +1,104 @@
+import React, { useCallback, useState, useEffect } from "react";
+import AddIcon from "@material-ui/icons/Add";
+import { Fab, TextField, Input } from "@material-ui/core";
+import Autocomplete from '@mui/material/Autocomplete';
+import Table from '@mui/material/Table';
+import TableBody from '@mui/material/TableBody';
+import TableCell, { tableCellClasses } from '@mui/material/TableCell';
+import TableContainer from '@mui/material/TableContainer';
+import TableHead from '@mui/material/TableHead';
+import TableRow from '@mui/material/TableRow';
+import Paper from '@mui/material/Paper';
+import { styled } from '@mui/material/styles';
+
 import Head from 'next/head'
+const StyledTableCell = styled(TableCell)(({ theme }) => ({
+  [`&.${tableCellClasses.head}`]: {
+    backgroundColor: theme.palette.common.black,
+    color: theme.palette.common.white,
+  },
+  [`&.${tableCellClasses.body}`]: {
+    fontSize: 14,
+  },
+}));
+
+const StyledTableRow = styled(TableRow)(({ theme }) => ({
+  '&:nth-of-type(odd)': {
+    backgroundColor: theme.palette.action.hover,
+  },
+  // hide last border
+  '&:last-child td, &:last-child th': {
+    border: 0,
+  },
+}));
 
 export default function Home() {
+  const [dataJson, setDataJson] = useState(false);
+  const [filteredJsonData, setFilteredJsonData] = useState([])
+  const [selectedItems, updateSelectedItems] = useState([]);
+  
+  const parseCSV = (text) => {
+    const result = {
+      header: [],
+      data: []
+    };
+  
+    const [header, ...content] = text.split('\n');
+  
+    result.header = header.split(';');
+  
+    const maxCols = result.header.length;
+  
+    content.forEach((item) => {
+      result.data.push(item.split(';').slice(0, maxCols));
+    });
+  
+    return result;
+  };
+  
+  useEffect(() => {
+    if (!dataJson.data) return
+    
+    const newDataJsonData = recreateDataArray(dataJson.data)
+    setFilteredJsonData(newDataJsonData)
+
+  }, [dataJson]);
+
+  const recreateDataArray = (data) => {
+    // TODO: Trocar por um array merge nos nomes das chaves
+    return data.map((item) => {
+      return {
+        'code': item[0],
+        'description': item[1],
+        'unity_ref': item[2],
+        'origin_price': item[3],
+        'average_price': item[4]
+      }
+    })
+
+  }
+  
+  const handleChangeCsv = useCallback((e) => {
+    if(e.target.files.length > 0){
+      const reader = new FileReader()
+      reader.onload = async (e) => { 
+        const dataToJson = parseCSV(e.target.result)
+        setDataJson(dataToJson)
+      };
+      reader.readAsText(e.target.files[0])
+    }
+  }, []);
+
+  const selectItemList = useCallback((data) => {
+
+      updateSelectedItems( arr => data)
+
+    console.log(selectedItems)
+  }, []);
+
+  
+
+
   return (
     <div className="container">
       <Head>
@@ -9,44 +107,73 @@ export default function Home() {
       </Head>
 
       <main>
-        <h1 className="title">
-          Welcome to <a href="https://nextjs.org">Next.js!</a>
-        </h1>
-
-        <p className="description">
-          Get started by editing <code>pages/index.js</code>
-        </p>
-
-        <div className="grid">
-          <a href="https://nextjs.org/docs" className="card">
-            <h3>Documentation &rarr;</h3>
-            <p>Find in-depth information about Next.js features and API.</p>
-          </a>
-
-          <a href="https://nextjs.org/learn" className="card">
-            <h3>Learn &rarr;</h3>
-            <p>Learn about Next.js in an interactive course with quizzes!</p>
-          </a>
-
-          <a
-            href="https://github.com/vercel/next.js/tree/master/examples"
-            className="card"
+      {!dataJson && (
+        <label htmlFor="upload-csv">
+          <Input
+            style={{ display: "none" }}
+            id="upload-csv"
+            name="upload-csv"
+            type="file"
+            onChange={handleChangeCsv}
+          />
+          <Fab
+            color="secondary"
+            size="small"
+            component="span"
+            aria-label="add"
+            variant="extended"
           >
-            <h3>Examples &rarr;</h3>
-            <p>Discover and deploy boilerplate example Next.js projects.</p>
-          </a>
-
-          <a
-            href="https://vercel.com/import?filter=next.js&utm_source=create-next-app&utm_medium=default-template&utm_campaign=create-next-app"
-            className="card"
-          >
-            <h3>Deploy &rarr;</h3>
-            <p>
-              Instantly deploy your Next.js site to a public URL with Vercel.
-            </p>
-          </a>
-        </div>
+            <AddIcon /> Upload Csv
+          </Fab>
+        </label>
+      )}
+       
+      {dataJson && (
+        <Autocomplete
+          multiple
+          disablePortal
+          id="combo-box-demo"
+          options={filteredJsonData}
+          sx={{ width: 600 }}
+          getOptionLabel={(option) => {
+            return `${option.code} - ${option.description}`
+          }}
+          renderInput={(params) => <TextField {...params} label="Pesquisa Fabola :D" />}
+          onChange={(event, newInputValue) => selectItemList(newInputValue)}
+        />
+      )}
+      <br/>
+      {dataJson && (
+        <TableContainer component={Paper}>
+          <Table sx={{ minWidth: 700 }} aria-label="customized table">
+            <TableHead>
+              <TableRow>
+              {dataJson.header.map((row) => (
+                  <StyledTableCell key={row}>{row}</StyledTableCell>
+              ))}
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {selectedItems.map((row) => (
+                <StyledTableRow key={row.code}>
+                  <StyledTableCell component="th" scope="row">
+                    {row.code}
+                  </StyledTableCell>
+                  <StyledTableCell align="right">{row.description}</StyledTableCell>
+                  <StyledTableCell align="right">{row.unity_ref}</StyledTableCell>
+                  <StyledTableCell align="right">{row.origin_price}</StyledTableCell>
+                  <StyledTableCell align="right">{row.average_price}</StyledTableCell>
+                </StyledTableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </TableContainer>
+      )}
+      {!dataJson && (
+        <h2>Ainda não foi selecionado nenhum item ...</h2>
+      )}
       </main>
+
 
       <footer>
         <a
@@ -54,8 +181,7 @@ export default function Home() {
           target="_blank"
           rel="noopener noreferrer"
         >
-          Powered by{' '}
-          <img src="/vercel.svg" alt="Vercel" className="logo" />
+          Powered by{' Alma negra '}
         </a>
       </footer>
 
