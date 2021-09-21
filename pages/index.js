@@ -123,6 +123,7 @@ export default function Home() {
       <Head>
         <title>Faça orçamento de obras com no SINAP mais rápido - Orça Obra Fácil</title>
         <link rel="icon" href="/favicon.ico" />
+        <script data-ad-client="ca-pub-3181441175405362" async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js"></script>
       </Head>
 
       <main>
