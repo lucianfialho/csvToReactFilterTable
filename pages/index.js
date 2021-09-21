@@ -1,6 +1,6 @@
 import React, { useCallback, useState, useEffect } from "react";
 import AddIcon from "@material-ui/icons/Add";
-import { Fab, TextField, Input } from "@material-ui/core";
+import { Fab, TextField, Input, Button } from "@material-ui/core";
 import LoadingButton from '@mui/lab/LoadingButton';
 
 import Autocomplete from '@mui/material/Autocomplete';
@@ -14,6 +14,7 @@ import Paper from '@mui/material/Paper';
 import { styled } from '@mui/material/styles';
 
 import Head from 'next/head'
+import { FastfoodOutlined } from "@material-ui/icons";
 const StyledTableCell = styled(TableCell)(({ theme }) => ({
   [`&.${tableCellClasses.head}`]: {
     backgroundColor: theme.palette.common.black,
@@ -39,7 +40,7 @@ export default function Home() {
   const [filteredJsonData, setFilteredJsonData] = useState([])
   const [selectedItems, updateSelectedItems] = useState([]);
   const [loading, setLoading] = useState(false);
-
+  const [total, setTotal] = useState(false)
   const parseCSV = (text) => {
     const result = {
       header: [],
@@ -51,6 +52,7 @@ export default function Home() {
     result.header = header.split(';');
     // Camelize
     result.header = convertHeaderToCammelCase(result.header)
+    result.header.push('quantity')
     const maxCols = result.header.length;
   
     content.forEach((item) => {
@@ -74,21 +76,20 @@ export default function Home() {
   useEffect(() => {
     if (!dataJson.data) return
     const newDataJsonData = recreateDataArray(dataJson.data)
-    
+
     setFilteredJsonData(newDataJsonData)
   }, [dataJson]);
 
   const recreateDataArray = (data) => {
-    
-    // TODO: Trocar por um array merge nos nomes das chaves
     return data.map((item) => {
       return item.reduce((acumulador, valorAtual, index) => {
-        const key = dataJson.header[index]
         acumulador = {
           ...acumulador,
         }
 
         acumulador[dataJson.header[index]] = valorAtual;
+
+        acumulador['quantity'] = 1
         return acumulador
       }, {})
     })
@@ -110,12 +111,38 @@ export default function Home() {
     updateSelectedItems(prevState => data)
   }, []);
 
+  const handleQuantity = (e, data, index) => {
+    
+    let items = [...selectedItems]
+    let item = {...items[index]}
+    item.quantity = parseInt(e.target.value) + 1
+    items[index] = item
+    updateSelectedItems(items)
+  }
+
   const generateList = (e) => {
     e.preventDefault()
     setLoading(true)
+
+    const subTotal = selectedItems.reduce((sum, { quantity, precoMedianoR$ }) => {
+      console.log(quantity)
+      return sum + parseFloat(precoMedianoR$.replace(',', '.')) * quantity
+    }, 0)
+
+    setTotal(subTotal)
+
     setTimeout(() => {
       window.print()
     }, 2000);
+  }
+
+
+  const clear = (e) => {
+    e.preventDefault()
+    setLoading(false)
+    setDataJson(false)
+    setTotal(0)
+    updateSelectedItems([])
   }
 
   return (
@@ -175,7 +202,7 @@ export default function Home() {
                 </TableRow>
               </TableHead>
               <TableBody>
-                {selectedItems.map((row) => (
+                {selectedItems?.map((row, index) => (
                   <StyledTableRow key={row.codigo}>
                     <StyledTableCell component="th" scope="row">
                       {row.codigo}
@@ -184,13 +211,29 @@ export default function Home() {
                     <StyledTableCell align="right">{row.unidadeDeMedida}</StyledTableCell>
                     <StyledTableCell align="right">{row.origemDoPreco}</StyledTableCell>
                     <StyledTableCell align="right">{row.precoMedianoR$}</StyledTableCell>
+                    <StyledTableCell align="right">
+                      <Input
+                        id="standard-number"
+                        type="number"
+                        variant="standard"
+                        defaultValue={row.quantity}
+                        onChange={(e) => {handleQuantity(e, row, index) }}
+                      />
+                    </StyledTableCell>
                   </StyledTableRow>
                 ))}
+                <TableRow>
+                  <TableCell colSpan={2}>Total</TableCell>
+                  <TableCell align="right">{total}</TableCell>
+                </TableRow>
               </TableBody>
             </Table>
           </TableContainer>
           {selectedItems.length && (
-            <LoadingButton loading={loading} className={`gerarRelatorio`} variant="contained" onClick={generateList}>{`Gerar relatório`}</LoadingButton >
+            <>
+              <LoadingButton loading={loading} className={`gerarRelatorio`} variant="contained" onClick={generateList}>{`Gerar relatório`}</LoadingButton>
+              <Button className={`gerarRelatorio`} variant="contained" onClick={clear}>{`Voltar ao inicio`}</Button>
+            </>
           )}
         </div>
       )}
@@ -352,7 +395,15 @@ export default function Home() {
 
         .content .gerarRelatorio{
           float: right;
-          margin: 20px 0;
+          margin: 20px 10px;
+        }
+        @media print {
+          .gerarRelatorio {
+            display: none;
+          }
+          .footer {
+            display: none
+          }
         }
       `}</style>
     </div>
