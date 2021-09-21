@@ -1,6 +1,6 @@
 import React, { useCallback, useState, useEffect } from "react";
 import AddIcon from "@material-ui/icons/Add";
-import { Fab, TextField, Input } from "@material-ui/core";
+import { Fab, TextField, Input, Button } from "@material-ui/core";
 import Autocomplete from '@mui/material/Autocomplete';
 import Table from '@mui/material/Table';
 import TableBody from '@mui/material/TableBody';
@@ -46,7 +46,8 @@ export default function Home() {
     const [header, ...content] = text.split('\n');
   
     result.header = header.split(';');
-  
+    // Camelize
+    result.header = convertHeaderToCammelCase(result.header)
     const maxCols = result.header.length;
   
     content.forEach((item) => {
@@ -56,24 +57,40 @@ export default function Home() {
     return result;
   };
   
+  const convertHeaderToCammelCase =  (headerArray) => {
+    
+    return headerArray.map((item) => camelize(item.toLowerCase()))
+
+  }
+
+  function camelize(str) {
+    return str.replace(/(?:^\w|[A-Z]|\b\w|\s+)/g, function(match, index) {
+      if (+match === 0) return ""; // or if (/\s+/.test(match)) for white spaces
+      return index === 0 ? match.toLowerCase() : match.toUpperCase();
+    });
+  }
+
   useEffect(() => {
     if (!dataJson.data) return
-    
+  
     const newDataJsonData = recreateDataArray(dataJson.data)
+    
     setFilteredJsonData(newDataJsonData)
-
   }, [dataJson]);
 
   const recreateDataArray = (data) => {
+    
     // TODO: Trocar por um array merge nos nomes das chaves
     return data.map((item) => {
-      return {
-        'code': item[0],
-        'description': item[1],
-        'unity_ref': item[2],
-        'origin_price': item[3],
-        'average_price': item[4]
-      }
+      return item.reduce((acumulador, valorAtual, index) => {
+        const key = dataJson.header[index]
+        acumulador = {
+          ...acumulador,
+        }
+
+        acumulador[dataJson.header[index]] = valorAtual;
+        return acumulador
+      }, {})
     })
 
   }
@@ -90,14 +107,12 @@ export default function Home() {
   }, []);
 
   const selectItemList = useCallback((data) => {
-
       updateSelectedItems( arr => data)
-
-    console.log(selectedItems)
   }, []);
 
-  
-
+  const generateList = useCallback(() => {
+    console.log("asd")
+  }, []);
 
   return (
     <div className="container">
@@ -136,7 +151,7 @@ export default function Home() {
           options={filteredJsonData}
           sx={{ width: 600 }}
           getOptionLabel={(option) => {
-            return `${option.code} - ${option.description}`
+            return `${option.codigo} - ${option.descricaoDoInsumo}`
           }}
           renderInput={(params) => <TextField {...params} label="Pesquisa Fabola :D" />}
           onChange={(event, newInputValue) => selectItemList(newInputValue)}
@@ -144,30 +159,35 @@ export default function Home() {
       )}
       <br/>
       {dataJson && (
-        <TableContainer component={Paper}>
-          <Table sx={{ minWidth: 700 }} aria-label="customized table">
-            <TableHead>
-              <TableRow>
-              {dataJson.header.map((row) => (
-                  <StyledTableCell key={row}>{row}</StyledTableCell>
-              ))}
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {selectedItems.map((row) => (
-                <StyledTableRow key={row.code}>
-                  <StyledTableCell component="th" scope="row">
-                    {row.code}
-                  </StyledTableCell>
-                  <StyledTableCell align="right">{row.description}</StyledTableCell>
-                  <StyledTableCell align="right">{row.unity_ref}</StyledTableCell>
-                  <StyledTableCell align="right">{row.origin_price}</StyledTableCell>
-                  <StyledTableCell align="right">{row.average_price}</StyledTableCell>
-                </StyledTableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </TableContainer>
+        <div className={`content`}>
+          <TableContainer component={Paper}>
+            <Table sx={{ minWidth: 700 }} aria-label="customized table">
+              <TableHead>
+                <TableRow>
+                {dataJson.header.map((row) => (
+                    <StyledTableCell key={row}>{row}</StyledTableCell>
+                ))}
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {selectedItems.map((row) => (
+                  <StyledTableRow key={row.codigo}>
+                    <StyledTableCell component="th" scope="row">
+                      {row.codigo}
+                    </StyledTableCell>
+                    <StyledTableCell align="right">{row.descricaoDoInsumo}</StyledTableCell>
+                    <StyledTableCell align="right">{row.unidadeDeMedida}</StyledTableCell>
+                    <StyledTableCell align="right">{row.origemDoPreco}</StyledTableCell>
+                    <StyledTableCell align="right">{row.precoMedianoR$}</StyledTableCell>
+                  </StyledTableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </TableContainer>
+          {selectedItems.length && (
+            <Button className={`gerarRelatorio`} variant="contained" onClick={generateList}>{`Gerar relatório`}</Button>
+          )}
+        </div>
       )}
       {!dataJson && (
         <h2>Ainda não foi selecionado nenhum item ...</h2>
@@ -176,13 +196,7 @@ export default function Home() {
 
 
       <footer>
-        <a
-          href="https://vercel.com?utm_source=create-next-app&utm_medium=default-template&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Powered by{' Alma negra '}
-        </a>
+        Powered by{' Alma negra '}
       </footer>
 
       <style jsx>{`
@@ -314,6 +328,7 @@ export default function Home() {
             flex-direction: column;
           }
         }
+
       `}</style>
 
       <style jsx global>{`
@@ -328,6 +343,11 @@ export default function Home() {
 
         * {
           box-sizing: border-box;
+        }
+
+        .content .gerarRelatorio{
+          float: right;
+          margin: 20px 0;
         }
       `}</style>
     </div>
