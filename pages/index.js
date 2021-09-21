@@ -1,6 +1,8 @@
 import React, { useCallback, useState, useEffect } from "react";
 import AddIcon from "@material-ui/icons/Add";
-import { Fab, TextField, Input, Button } from "@material-ui/core";
+import { Fab, TextField, Input } from "@material-ui/core";
+import LoadingButton from '@mui/lab/LoadingButton';
+
 import Autocomplete from '@mui/material/Autocomplete';
 import Table from '@mui/material/Table';
 import TableBody from '@mui/material/TableBody';
@@ -36,7 +38,8 @@ export default function Home() {
   const [dataJson, setDataJson] = useState(false);
   const [filteredJsonData, setFilteredJsonData] = useState([])
   const [selectedItems, updateSelectedItems] = useState([]);
-  
+  const [loading, setLoading] = useState(false);
+
   const parseCSV = (text) => {
     const result = {
       header: [],
@@ -58,9 +61,7 @@ export default function Home() {
   };
   
   const convertHeaderToCammelCase =  (headerArray) => {
-    
     return headerArray.map((item) => camelize(item.toLowerCase()))
-
   }
 
   function camelize(str) {
@@ -72,7 +73,6 @@ export default function Home() {
 
   useEffect(() => {
     if (!dataJson.data) return
-  
     const newDataJsonData = recreateDataArray(dataJson.data)
     
     setFilteredJsonData(newDataJsonData)
@@ -107,12 +107,16 @@ export default function Home() {
   }, []);
 
   const selectItemList = useCallback((data) => {
-      updateSelectedItems( arr => data)
+    updateSelectedItems(prevState => data)
   }, []);
 
-  const generateList = useCallback(() => {
-    console.log("asd")
-  }, []);
+  const generateList = (e) => {
+    e.preventDefault()
+    setLoading(true)
+    setTimeout(() => {
+      window.print()
+    }, 2000);
+  }
 
   return (
     <div className="container">
@@ -143,7 +147,7 @@ export default function Home() {
         </label>
       )}
        
-      {dataJson && (
+      {dataJson && !loading && (
         <Autocomplete
           multiple
           disablePortal
@@ -185,7 +189,7 @@ export default function Home() {
             </Table>
           </TableContainer>
           {selectedItems.length && (
-            <Button className={`gerarRelatorio`} variant="contained" onClick={generateList}>{`Gerar relatório`}</Button>
+            <LoadingButton loading={loading} className={`gerarRelatorio`} variant="contained" onClick={generateList}>{`Gerar relatório`}</LoadingButton >
           )}
         </div>
       )}
